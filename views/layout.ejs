@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <base href="http://localhost:3000">
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MINIGAME BLOCKCHAIN</title>
+    <script src="./scripts/web3.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+</head>
+
+<body>
+    <div style="display: flex; justify-content: space-between;">
+        <h2>MINIGAME</h2>
+        <button id="connectMtm">Connect Meta Mask</button>
+    </div>
+    <div id="formRegis">
+        <input type="email" name="" id="textEmail" placeholder="Enter your email !">
+        <input type="text" name="" id="textName" placeholder="Enter your name !">
+        <input type="text" name="" id="textPhone" placeholder="Enter your phone !">
+        <button id="btnRegis">Register</button>
+    </div>
+</body>
+
+</html>
+<script>
+    $(document).ready(function() {
+        // Kết nối với Smart Contract cần API code vs address contract
+        const abi = [{
+            "inputs": [{
+                "internalType": "string",
+                "name": "_id",
+                "type": "string"
+            }],
+            "name": "Register",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        }, {
+            "anonymous": false,
+            "inputs": [{
+                "indexed": false,
+                "internalType": "address",
+                "name": "_vi",
+                "type": "address"
+            }, {
+                "indexed": false,
+                "internalType": "string",
+                "name": "_id",
+                "type": "string"
+            }],
+            "name": "SM_send_data",
+            "type": "event"
+        }, {
+            "inputs": [{
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }],
+            "name": "arrUser",
+            "outputs": [{
+                "internalType": "string",
+                "name": "_ID",
+                "type": "string"
+            }, {
+                "internalType": "address",
+                "name": "_PAY",
+                "type": "address"
+            }],
+            "stateMutability": "view",
+            "type": "function"
+        }];
+        const addContract = "0xE59A687c25e11A02cAfad93D6F39737c393b1860"
+
+        // Khái báo web3
+        const web3 = new Web3(window.ethereum);
+        window.ethereum.enable();
+
+        // Tạo contract cho metamask
+        const contractMetaMask = new web3.eth.Contract(abi, addContract);
+        console.log(contractMetaMask)
+
+        // Tạo contract cho infura
+        var provider = new Web3.providers.WebsocketProvider("wss://mainnet.infura.io/ws/v3/f6761537fbd9491aa64a567439f5c233")
+        var web3_infura = new Web3(provider)
+        var contractInfura = web3_infura.eth.Contract(abi, addContract)
+        contractInfura.events.SM_send_data({
+            filter: {},
+            fromBlock: "latest"
+        }, function(err, data) {
+            if (error) {
+                console.log(error)
+            } else {
+                console.log(data)
+            }
+        })
+
+        var currentAccount = ""
+        checkMetamask();
+        // Kết nối với metamask và lấy địa chỉ ví
+        $("#connectMtm").click(function() {
+            connectMetaMask().then((data) => {
+                currentAccount = data[0]
+                console.log(data[0])
+            }).catch((err) => {
+                console.log(err)
+            })
+        })
+
+        $("#btnRegis").click(function() {
+            if (currentAccount.length == 0) {
+                alert("Please login metamask !")
+            } else {
+                $.post("/register", {
+                    email: $('#textEmail').val(),
+                    name: $('#textName').val(),
+                    phone: $('#textPhone').val()
+                }, function(data) {
+                    if (data.Result == 1) {
+                        // Sử dụng function của smart contract khi đã kết nối
+                        contractMetaMask.methods.Register(data.message._id).send({
+                            from: currentAccount,
+                        });
+                    }
+                    console.log(data)
+                })
+            }
+        })
+
+    })
+
+    // Connect metamask vs web để lấy địa chỉ ví hiện tại
+    async function connectMetaMask() {
+        const accounts = await ethereum.request({
+            method: 'eth_requestAccounts'
+        });
+        return accounts;
+    }
+
+    // Kiểm tra thử metamask được cài đặt chưa.
+    function checkMetamask() {
+        if (typeof window.ethereum !== 'undefined') {
+            console.log('MetaMask is installed!');
+        } else {
+            console.log("MetaMask not install")
+        }
+    }
+</script>
